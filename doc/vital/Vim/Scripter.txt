@@ -1,0 +1,178 @@
+*vital/Vim.Scripter.txt*    A vital.vim module for scripting key types.
+
+Author: mityu <mityu.mail@gmail.com>
+License: zlib License
+
+==============================================================================
+CONTENTS					*Vital.Vim.Scripter-contents*
+
+FUNCTIONS				|Vital.Vim.Scripter-functions|
+  MODULE FUNCTIONS			|Vital.Vim.Scripter-module-functions|
+  OBJECT FUNCTIONS			|Vital.Vim.Scripter-object-functions|
+EXAMPLES				|Vital.Vim.Scripter-examples|
+
+
+==============================================================================
+FUNCTIONS					*Vital.Vim.Scripter-functions*
+
+------------------------------------------------------------------------------
+MODULE FUNCTIONS			*Vital.Vim.Scripter-module-functions*
+
+						*Vital.Vim.Scripter.new()*
+new()
+	Creates new scripter object.
+	See |Vital.Vim.Scripter-object-functions| for the member functions.
+
+
+------------------------------------------------------------------------------
+OBJECT FUNCTIONS			*Vital.Vim.Scripter-object-functions*
+
+List of member functions of the object returned by |Vital.Vim.Scripter.new()|.
+
+		*Vital.Vim.Scripter-object-set_auto_replace_termcodes()*
+set_auto_replace_termcodes({flag})
+	Change the way how .feedkeys() and .feedkeys_remap() interprets the
+	given keys.
+			|Vital.Vim.Scripter-object-feedkeys()|
+			|Vital.Vim.Scripter-object-feedkeys_remap()|
+
+	{flag} is a number or boolean.  If {flag} is false, .feedkeys() and
+	.feedkeys_remap() of later calls interpret the given string in the
+	same way that |feedkey()| does.  If {flag} is true, .feedkeys() and
+	.feedkeys_remap() of later calls interpret the given string as it's
+	written in the form which can be used in |:map|.
+
+	Input		{flag}		Interpretation~
+	------------------------------------------------------------
+	"xyz"		false		"x", "y", and "z"
+			true		"x", "y", and "z"
+
+	"<ESC>"		false		"<", "E", "S", "C", and ">"
+			true		"\<ESC>"
+
+	"\<ESC>"	false		"\<ESC>"
+			true		"\<ESC>"
+
+	"<lt>"		false		"<", "l", "t", and ">"
+			true		"<"
+
+	In default, this {flag} is set to false.
+
+	This function returns the object itself so you can chain another
+	member function call.
+
+	Examples: >
+	let s:Scripter = vital#vital#import('Vim.Scripter')
+
+	inoremap <Plug>(test-mapping) (rhs-test-mapping)
+	call s:Scripter.new()
+	  \.feedkeys('i')
+	  \.feedkeys_remap("\<Plug>(test-mapping)")
+	  \.call({-> assert_equal('(rhs-test-mapping)', getline('.'))})
+	  \.feedkeys("\<CR>")
+	  \.feedkeys_remap('<Plug>(test-mapping)')
+	  \.call({-> assert_equal('<Plug>(test-mapping)', getline('.'))})
+	  \.set_auto_replace_termcodes(1)
+	  \.feedkeys("\<CR>")
+	  \.feedkeys_remap('<Plug>(test-mapping)')
+	  \.call({-> assert_equal('(rhs-test-mapping)', getline('.'))})
+	  \.feedkeys('<ESC>')
+	  \.run()
+<
+
+				*Vital.Vim.Scripter-object-feedkeys()*
+feedkeys({keys})
+	Record {keys} as the key types to be fed.  This function won't resolve
+	re-mappings, so this function is like `feedkeys({keys}, 'n')` .
+	If you want to apply re-mappings, use .feedkeys_remap().
+			|Vital.Vim.Scripter-object-feedkeys_remap()|
+
+	{keys} are not put on the Vim's input queue immediately.  You should
+	call .run() to actually feed {keys}.
+				|Vital.Vim.Scripter-object-run()|
+
+	{keys} is a string and is interpreted in the same way that
+	|feedkeys()| does unless .set_auto_replace_termcodes() is called with
+	truthy value.  See the description of .set_auto_replace_termcodes()
+	for the details.
+		|Vital.Vim.Scripter-object-set_auto_replace_termcodes()|
+
+	This function returns the object itself so you can chain another
+	member function call.
+
+				*Vital.Vim.Scripter-object-feedkeys_remap()*
+feedkeys_remap({keys})
+	Similar to .feedkeys(), but apply re-mappings.  In other words, this
+	function is like `feedkeys({keys}, 'm')` .
+			|Vital.Vim.Scripter-object-feedkeys()|
+
+	{keys} are not put on the Vim's input queue immediately.  You should
+	call .run() to actually feed {keys}.
+				|Vital.Vim.Scripter-object-run()|
+
+	{keys} is a string to feed.  See the description of
+	.set_auto_replace_termcodes() to know how {keys} is interpreted.
+		|Vital.Vim.Scripter-object-set_auto_replace_termcodes()|
+
+	This function returns the object itself so you can chain another
+	member function call.
+
+				*Vital.Vim.Scripter-object-call()*
+call({fn})
+	Call the given function {fn}.  {fn} should be a |Funcref| with no
+	arguments.
+
+	{fn} is not called immediately.  You should call .run() to actually
+	call {fn}.
+				|Vital.Vim.Scripter-object-run()|
+
+	This function returns the object itself so you can chain another
+	member function call.
+
+	NOTE: On Vim before 8.2.1978 or Neovim before v0.3.0, which does not
+	support |<Cmd>|, {fn} is called via |:map-<expr>|.  This means that
+	{fn} is called while |textlock| is active so that you cannot modify
+	buffer, change buffer, change window, etc., in {fn}.
+
+				*Vital.Vim.Scripter-object-run()*
+run()
+	Invoke the key feeds and function calls provided by previous calls of
+	.feedkeys(), .feedkeys_remap(), and .call().
+			|Vital.Vim.Scripter-object-feedkeys()|
+			|Vital.Vim.Scripter-object-feedkeys_remap()|
+			|Vital.Vim.Scripter-object-call()|
+
+	Different from other functions, this function does NOT return
+	anything, of course the object itself.
+
+
+==============================================================================
+EXAMPLES				*Vital.Vim.Scripter-examples*
+
+>
+	let s:Scripter = vital#vital#import('Vim.Scripter')
+
+	call s:Scripter.new()
+	  \.call({-> assert_equal('n', mode())})
+	  \.feedkeys('ifoobar')
+	  \.call({-> assert_equal('i', mode())})
+	  \.call({-> assert_equal('foobar', getline('.'))})
+	  \.feedkeys("\<ESC>")
+	  \.call({-> assert_equal('n', mode())})
+	  \.run()
+
+	inoremap <Plug>(test-mapping) (rhs-test-mapping)
+	call s:Scripter.new()
+	  \.feedkeys('i')
+	  \.feedkeys_remap("\<Plug>(test-mapping)")
+	  \.call({-> assert_equal('(rhs-test-mapping)', getline('.'))})
+	  \.set_auto_replace_termcodes(1)
+	  \.feedkeys_remap('<Plug>(test-mapping)')
+	  \.call({-> assert_equal(
+	  \    '(rhs-test-mapping)(rhs-test-mapping)', getline('.'))})
+	  \.feedkeys('<ESC>')
+	  \.run()
+<
+
+==============================================================================
+vim:tw=78:fo=tcq2mM:ts=8:ft=help:norl
